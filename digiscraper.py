@@ -4,49 +4,65 @@ import requests
 import pandas as pd
 
 
-CATEGORY = "mobile-phone"    
-BRAND = "samsung"            
-OUTPUT_FILE = "digikala_samsung.csv"
-MAX_PAGES = None                              
+CATEGORY = "mobile-phone"
+BRAND = "samsung"
+OUTPUT_FILE = "digikala_products.csv"
+MAX_PAGES = None
 
 SITE = "https://www.digikala.com"
-URL = (
-    "https://api.digikala.com/discovery/api/v1/"
-    f"categories/{CATEGORY}/brands/{BRAND}/products"
-)
+API_URL = "https://api.digikala.com/discovery/api/v1/"
 
 HEADERS = {
     "User-Agent": (
-        "Mozilla/5.0 (X11; Linux x86_64)"
-        "AppleWebkit/537.36 (KHTML, like Gecko)"
+        "Mozilla/5.0 (X11; Linux x86_64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
         "Chrome/152.0.0.0 Safari/537.36"
     ),
     "Accept": "application/json, text/plain, */*"
 }
 
-def get_page(page):
+
+def get_page(page, category=None, brand=None):
+    category = category or CATEGORY
+    brand = brand or BRAND
+
+    url = f"{API_URL}categories/{category}/brands/{brand}/products"
     params = {"page": page, "view_type": "listing"}
 
     for attempt in range(3):
         try:
-            response = requests.get(URL,  params=params, headers=HEADERS, timeout=15)
-        except requests.RequestException:
-            print(" The internet is taking a little nap. Lets give it 10 minutes!:)")
+            response = requests.get(
+                url,
+                params=params,
+                headers=HEADERS,
+                timeout=15
+            )
+
+        except requests.RequestException as error:
+            print(f"Network error on page {page}: {error}")
             time.sleep(10)
             continue
 
         if response.status_code == 200:
-            return response.json()
+            try:
+                return response.json()
+            except ValueError:
+                print(f"Invalid JSON response on page {page}.")
+                return None
 
         if response.status_code in (403, 404):
-            print("Status code", response.status_code, "- Stopping.")
+            print(f"Status code {response.status_code} - Stopping.")
             return None
 
-        print("Status code", response.status_code, "-_Waiting 30 seconds before retrying.")
+        print(
+            f"Status code {response.status_code} - "
+            "Waiting 30 seconds before retrying."
+        )
         time.sleep(30)
 
-    print("All retry attempts failed for page", page)
+    print(f"All retry attempts failed for page {page}.")
     return None
+
 
 def creat_product_row(product):
     product_variant = product.get("default_variant") or {}
@@ -58,91 +74,159 @@ def creat_product_row(product):
     url_info = product.get("url") or {}
 
     rial = price.get("selling_price")
-    if rial is not None:
-        toman = rial // 10
-    else: 
-        toman = None
+    toman = rial // 10 if rial is not None else None
 
     uri = url_info.get("uri")
-    if uri:
-        link = "https://www.digikala.com" + uri
-    else: 
-        link = None
+    link = SITE + uri if uri else None
 
     return {
-    "id": product.get("id"),
-    "title_fa": product.get("title_fa"),
-    "title_en": product.get("title_en"),
-    "price_rial": rial,
-    "price_toman": toman,
-    "discount_percent": price.get("discount_percent"),
-    "rating_rate": rating.get("rate"),
-    "seller": seller.get("title"),
-    "warranty": warranty.get("title"),
-    "color": color.get("title"),
-    "url": link,
-    "scraped_at": time.strftime("%Y-%m-%d %H:%M:%S"),
-}
+        "id": product.get("id"),
+        "title_fa": product.get("title_fa"),
+        "title_en": product.get("title_en"),
+        "price_rial": rial,
+        "price_toman": toman,
+        "discount_percent": price.get("discount_percent"),
+        "rating_rate": rating.get("rate"),
+        "seller": seller.get("title"),
+        "warranty": warranty.get("title"),
+        "color": color.get("title"),
+        "url": link,
+        "scraped_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+    }
 
-def save_files(collected_products):
+
+def save_files(collected_products, output_file=None):
+    output_file = output_file or OUTPUT_FILE
+
     table = pd.DataFrame(list(collected_products.values()))
+
     table.to_csv(
-        OUTPUT_FILE,
+        output_file,
         index=False,
         encoding="utf-8-sig"
     )
 
-    print("Saved:", len(collected_products), "products")
+    print("Saved:", len(collected_products), "products to", output_file)
 
 
-def main():
-    collected_products = {}  
+def scrape_products(
+    category=None,
+    brand=None,
+    max_pages=None,
+    progress_callback=None,
+    output_file=None
+):
+    """
+    Scrape products for a selected category and brand.
 
-    first_page = get_page(1)
+    progress_callback receives:
+    (current_page, total_pages, products_collected, status_message)
+    """
+    category = category or CATEGORY
+    brand = brand or BRAND
+    output_file = output_file or OUTPUT_FILE
+
+    collected_products = {}
+
+    first_page = get_page(1, category, brand)
+
     if first_page is None:
-        print("Failed to retrieve the first page.")
-        return
+        if progress_callback:
+            progress_callback(
+                0, 0, 0,
+                "Failed to retrieve the first page."
+            )
+        return collected_products
 
-    total_pages = first_page.get("data", {}).get("pager", {}).get("total_pages", 1)
-    print("Total pages:", total_pages)
+    total_pages = (
+        first_page.get("data", {})
+        .get("pager", {})
+        .get("total_pages", 1)
+    )
 
     last_page = total_pages
-    if MAX_PAGES is not None and MAX_PAGES < total_pages:
-        last_page = MAX_PAGES
+
+    if max_pages is not None:
+        last_page = min(max(0, max_pages), total_pages)
+
+    if last_page == 0:
+        if progress_callback:
+            progress_callback(0, total_pages, 0, "No pages selected.")
+        return collected_products
+
+    if progress_callback:
+        progress_callback(0, last_page, 0, "Scraping started.")
 
     for page in range(1, last_page + 1):
         if page == 1:
             data = first_page
         else:
             time.sleep(random.uniform(2, 4))
-            data = get_page(page)
+            data = get_page(page, category, brand)
 
         if data is None:
-            print("Failed to retrieve page", page, "- Stopping.")
+            if progress_callback:
+                progress_callback(
+                    page, last_page, len(collected_products),
+                    f"Failed to retrieve page {page}. Stopping."
+                )
             break
 
         products = data.get("data", {}).get("products", [])
-        if len(products) == 0:
-            print("The page is empty. Stopping.")
+
+        if not products:
+            if progress_callback:
+                progress_callback(
+                    page, last_page, len(collected_products),
+                    "The page is empty. Stopping."
+                )
             break
 
         for product in products:
             properties = product.get("properties") or {}
+
             if properties.get("is_ad"):
                 continue
 
-            collected_products[product.get("id")] = creat_product_row(product)
+            product_id = product.get("id")
+
+            if product_id is not None:
+                collected_products[product_id] = creat_product_row(product)
 
         print(
             "Page", page, "of", last_page,
             "- Total products:", len(collected_products)
         )
 
+        if progress_callback:
+            progress_callback(
+                page, last_page, len(collected_products),
+                f"Scraped page {page} of {last_page}."
+            )
+
         if page % 5 == 0:
-            save_files(collected_products)
+            save_files(collected_products, output_file)
 
-    if len(collected_products) > 0:
-        save_files(collected_products)
+    if collected_products:
+        save_files(collected_products, output_file)
+
+    if progress_callback:
+        progress_callback(
+            last_page, last_page, len(collected_products),
+            "Scraping completed."
+        )
+
+    return collected_products
 
 
-main()
+def main():
+    collected_products = scrape_products(
+        category=CATEGORY,
+        brand=BRAND,
+        max_pages=MAX_PAGES
+    )
+    print("Total collected:", len(collected_products))
+
+
+if __name__ == "__main__":
+    main()

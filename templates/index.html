@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>ScrapeLab | Digikala Dashboard</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+    <script
+        src="{{ url_for('static', filename='script.js') }}"
+        defer
+    ></script>
+</head>
+
+<body>
+<div class="app-shell">
+
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-icon">S</div>
+            <div>
+                <strong>ScrapeLab</strong>
+                <span>DATA DASHBOARD</span>
+            </div>
+        </div>
+
+        <div class="side-label">MAIN MENU</div>
+
+        <a class="nav-item active" href="/">
+            <span>▦</span> Overview
+        </a>
+
+        <a class="nav-item" href="#results">
+            <span>▤</span> Collected Products
+        </a>
+
+        <div class="sidebar-bottom">
+            <span class="status-dot"></span>
+            <div>
+                <strong>Local Environment</strong>
+                <small>Python server connection</small>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-content">
+
+        <header class="topbar">
+            <div>
+                <div class="eyebrow">SCRAPER CONTROL CENTER</div>
+                <h1>Digikala Scraper Dashboard</h1>
+                <p>Collect and analyze product data from Digikala.</p>
+            </div>
+
+            <div class="top-pill">
+                <span class="live-dot"></span>
+                Local Server
+            </div>
+        </header>
+
+        <section class="welcome-card">
+            <div class="welcome-copy">
+                <span class="tag">PROJECT OVERVIEW</span>
+                <h2>Collect data. Compare performance.</h2>
+                <p>
+                    Choose a product category and brand, configure your
+                    scraping job, and monitor products and execution time.
+                </p>
+            </div>
+
+            <div class="hero-art" aria-hidden="true">
+                <div class="orbit orbit-one"></div>
+                <div class="orbit orbit-two"></div>
+                <div class="phone">
+                    <div class="phone-camera"></div>
+                    <div class="phone-screen">S</div>
+                </div>
+                <div class="spark spark-one">✦</div>
+                <div class="spark spark-two">✧</div>
+            </div>
+        </section>
+
+        <section class="section-heading">
+            <div>
+                <h2>Scraping Controls</h2>
+                <p>Configure your scraping job.</p>
+            </div>
+            <span class="step-badge">01 / CONFIGURE</span>
+        </section>
+
+        <section class="control-grid">
+
+            <div class="panel settings-panel">
+
+                <!-- Product category -->
+                <div class="product-select-group">
+                    <label for="category">Product Category</label>
+
+                    <div class="select-wrap">
+                        <select id="category" name="category">
+                            <option value="mobile-phone" selected>
+                                Mobile Phones
+                            </option>
+                            <option value="laptop-notebook">
+                                Laptops
+                            </option>
+                            <option value="tablet">
+                                Tablets
+                            </option>
+                            <option value="headphone">
+                                Headphones
+                            </option>
+                            <option value="smart-watch">
+                                Smart Watches
+                            </option>
+                        </select>
+                        <span>⌄</span>
+                    </div>
+
+                    <small class="helper">
+                        Choose the category you want to scrape.
+                    </small>
+                </div>
+
+                <!-- Brand -->
+                <div class="product-select-group">
+                    <label for="brand">Brand Slug</label>
+
+                    <input
+                        type="text"
+                        id="brand"
+                        name="brand"
+                        value="samsung"
+                        placeholder="e.g. samsung, xiaomi, apple"
+                        autocomplete="off"
+                    >
+
+                    <small class="helper">
+                        Enter the brand identifier used by Digikala.
+                    </small>
+                </div>
+
+                <!-- Number of pages -->
+                <label for="pages">Number of Pages</label>
+
+                <div class="select-wrap">
+                    <select id="pages">
+                        <option value="1">1 Page</option>
+                        <option value="2">2 Pages</option>
+                        <option value="3" selected>3 Pages</option>
+                        <option value="5">5 Pages</option>
+                        <option value="10">10 Pages</option>
+                    </select>
+                    <span>⌄</span>
+                </div>
+
+                <small class="helper">
+                    Start small. Each page may contain multiple products.
+                </small>
+
+                <!-- Scraping method -->
+                <label class="method-label">Scraping Method</label>
+
+                <div class="method-options">
+                    <label class="method-option">
+                        <input
+                            type="radio"
+                            name="method"
+                            value="threading"
+                            checked
+                        >
+
+                        <span class="method-card">
+                            <span class="method-icon thread-icon">⇄</span>
+                            <strong>Threading</strong>
+                            <small>Background execution for network requests</small>
+                        </span>
+                    </label>
+
+                    <label class="method-option">
+                        <input
+                            type="radio"
+                            name="method"
+                            value="async"
+                        >
+
+                        <span class="method-card">
+                            <span class="method-icon async-icon">⌁</span>
+                            <strong>Async</strong>
+                            <small>Asynchronous I/O with asyncio</small>
+                        </span>
+                    </label>
+                </div>
+
+                <button id="startButton" class="primary-button">
+                    <span>▶</span> Start Scraping
+                </button>
+
+                <p id="notice" class="notice" role="status">
+                    Ready. Configure your scraping job to get started.
+                </p>
+            </div>
+
+            <div class="panel progress-panel">
+                <div class="panel-topline">
+                    <h3>Job Status</h3>
+                    <span id="statusBadge" class="status-badge">Ready</span>
+                </div>
+
+                <div class="progress-number">
+                    <strong id="progressText">0</strong>
+                    <span id="progressTotal">of 3 pages</span>
+                </div>
+
+                <div class="progress-track">
+                    <div id="progressBar" class="progress-fill"></div>
+                </div>
+
+                <p id="statusText" class="progress-description">
+                    No scraping job has been started.
+                </p>
+
+                <div class="progress-divider"></div>
+
+                <div class="mini-info">
+                    <span class="mini-dot purple"></span>
+                    <span>Selected Method</span>
+                    <strong id="selectedMethod">Threading</strong>
+                </div>
+
+                <div class="mini-info">
+                    <span class="mini-dot green"></span>
+                    <span>Output Format</span>
+                    <strong>CSV</strong>
+                </div>
+            </div>
+        </section>
+
+        <section class="section-heading metrics-heading">
+            <div>
+                <h2>Execution Analytics</h2>
+                <p>Results from the latest scraping job.</p>
+            </div>
+            <span class="step-badge">02 / ANALYTICS</span>
+        </section>
+
+        <section class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-top">
+                    <span>Products Collected</span>
+                    <span class="metric-icon purple-bg">▤</span>
+                </div>
+                <strong id="productCount">0</strong>
+                <small>Unique products</small>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-top">
+                    <span>Execution Time</span>
+                    <span class="metric-icon blue-bg">◷</span>
+                </div>
+                <strong>
+                    <span id="elapsed">—</span>
+                    <small class="unit">sec</small>
+                </strong>
+                <small>Total execution time</small>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-top">
+                    <span>Last Method</span>
+                    <span class="metric-icon green-bg">⌘</span>
+                </div>
+                <strong id="lastMethod" class="method-value">—</strong>
+                <small>Last completed run</small>
+            </div>
+        </section>
+
+        <section id="results" class="section-heading results-heading">
+            <div>
+                <h2>Collected Products</h2>
+                <p>Up to 10 products from the latest run.</p>
+            </div>
+            <span class="csv-label">CSV · UTF-8</span>
+        </section>
+
+        <section class="panel table-panel">
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Price (Toman)</th>
+                            <th>Rating</th>
+                            <th>Product Link</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="resultsBody">
+                        <tr>
+                            <td colspan="4" class="empty-state">
+                                Start scraping to display collected products.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="table-footer">
+                <span>CSV file is saved in the project directory.</span>
+                <span class="footer-dot"></span>
+            </div>
+        </section>
+
+        <footer>
+            Built with Python · Flask · HTML · CSS · JavaScript
+        </footer>
+
+    </main>
+</div>
+</body>
+</html>
