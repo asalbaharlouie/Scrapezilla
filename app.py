@@ -84,10 +84,20 @@ def start_scraping():
     category = category.strip()
     brand = brand.strip()
 
+    # Validate pages before converting the value to an integer.
+    raw_pages = data.get("pages", 3)
+
+    if isinstance(raw_pages, bool) or isinstance(raw_pages, float):
+        return jsonify({"error": "Pages must be an integer."}), 400
+
     try:
-        pages = int(data.get("pages", 3))
+        pages = int(raw_pages)
     except (TypeError, ValueError):
-        return jsonify({"error": "Pages must be a number."}), 400
+        return jsonify({"error": "Pages must be an integer."}), 400
+
+    # Reject decimal strings such as "1.5" and "3.0".
+    if isinstance(raw_pages, str) and str(pages) != raw_pages.strip():
+        return jsonify({"error": "Pages must be an integer."}), 400
 
     if method not in ("threading", "async"):
         return jsonify({"error": "Invalid scraping method."}), 400
