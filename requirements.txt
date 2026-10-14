@@ -3,3 +3,8 @@ requests>=2.31,<3.0
 aiohttp>=3.9,<4.0
 pytest
 pytest-cov
+Flask
+requests
+pandas
+pytest
+pytest-cov
